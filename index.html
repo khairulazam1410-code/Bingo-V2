@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bingo Kaunselor: Susun Sendiri</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ecf0f1;
+            text-align: center;
+            padding: 10px;
+            margin: 0;
+            user-select: none; /* Elak text highlight masa main */
+        }
+
+        h1 { color: #2c3e50; margin: 10px 0 5px; font-size: 1.5rem; text-transform: uppercase; }
+        
+        /* Status Bar untuk Arahan */
+        .status-bar {
+            background: #34495e; color: #f1c40f; 
+            padding: 10px; margin-bottom: 15px; 
+            border-radius: 5px; font-size: 0.9rem; font-weight: bold;
+        }
+
+        /* GRID BINGO */
+        .bingo-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #95a5a6;
+            padding: 5px;
+            border-radius: 10px;
+        }
+
+        /* PETAK */
+        .bingo-cell {
+            background: white;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+            font-size: 0.65rem; /* Font compact */
+            font-weight: 600;
+            color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            word-wrap: break-word;
+            line-height: 1.1;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+        }
+
+        /* FASA 1: MODE SUSUN (SWAP) */
+        .mode-arrange .bingo-cell:active { transform: scale(0.9); }
+        .mode-arrange .selected {
+            background-color: #f1c40f !important;
+            color: #2c3e50 !important;
+            border: 2px solid #e67e22;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        /* FASA 2: MODE MAIN (MARK) */
+        .mode-play .marked {
+            background-color: #7f8c8d !important;
+            color: white !important;
+            position: relative;
+        }
+        .mode-play .marked::after {
+            content: "❌"; position: absolute; 
+            font-size: 2rem; opacity: 0.4;
+        }
+
+        /* FASA 3: SEMAK (WARNA) */
+        .reveal-micro { background-color: #e74c3c !important; color: white !important; border: 2px solid #c0392b; }
+        .reveal-empathy { background-color: #2ecc71 !important; color: white !important; border: 2px solid #27ae60; }
+
+        /* BUTTONS */
+        .controls {
+            margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding-bottom: 30px;
+        }
+        button {
+            padding: 12px 25px; font-size: 1rem; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        button:active { transform: translateY(2px); box-shadow: none; }
+        button:disabled { background: #bdc3c7; color: #7f8c8d; cursor: not-allowed; box-shadow: none; }
+
+        .btn-start { background: #f1c40f; color: #2c3e50; }
+        .btn-check { background: #34495e; color: white; display: none; } /* Sorok awal2 */
+
+        /* Animasi Swap */
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .swapped { animation: pop 0.3s ease; }
+
+    </style>
+</head>
+<body class="mode-arrange"> <h1>Bingo Kaunselor</h1>
+    <div class="status-bar" id="instruction">
+        Fasa 1: Klik dua petak untuk TUKAR tempat.
+    </div>
+
+    <div class="bingo-container" id="grid"></div>
+
+    <div class="controls">
+        <button id="btnStart" class="btn-start" onclick="startGame()">🔒 Kunci & Mula Main</button>
+        <button id="btnCheck" class="btn-check" onclick="revealAnswers()">📝 Semak Jawapan</button>
+    </div>
+
+    <script>
+        // DATA PENUH (25 AYAT: 14 Micro + 11 Empati)
+        const data = [
+            // MICRO (14)
+            { text: "Saya faham perasaan awak, tetapi mungkin situasi ini tidaklah seteruk yang awak fikirkan.", type: "micro" },
+            { text: "Ramai klien lain pernah melalui perkara yang sama.", type: "micro" },
+            { text: "Tak apa, semuanya akan baik-baik saja.", type: "micro" },
+            { text: "Awak jangan risau sangat, lama-lama perasaan ini akan reda.", type: "micro" },
+            { text: "Cubalah fikir secara lebih positif tentang perkara ini.", type: "micro" },
+            { text: "Kita tidak boleh ubah apa yang telah berlaku, jadi lebih baik kita terima.", type: "micro" },
+            { text: "Sebagai orang dewasa, awak sepatutnya boleh mengurus perasaan ini dengan lebih baik.", type: "micro" },
+            { text: "Mari kita bincangkan perkara ini secara lebih rasional.", type: "micro" },
+            { text: "Cuba kawal emosi supaya sesi ini lebih produktif.", type: "micro" },
+            { text: "Dalam budaya awak, perkara seperti ini biasanya diterima, bukan?", type: "micro" },
+            { text: "Awak nampak tenang, jadi saya anggap awak sudah boleh menerimanya.", type: "micro" },
+            { text: "Ramai orang lain menghadapi perkara yang lebih berat daripada ini.", type: "micro" },
+            { text: "Mungkin ini ujian untuk menjadikan awak lebih kuat.", type: "micro" },
+            { text: "Doa dan kesabaran mungkin lebih penting daripada terlalu memikirkan perasaan ini.", type: "micro" },
+
+            // EMPATI (11)
+            { text: "Terima kasih kerana mempercayai saya untuk berkongsi perkara ini.", type: "empathy" },
+            { text: "Apa yang awak alami kedengaran sangat memberi kesan kepada awak.", type: "empathy" },
+            { text: "Saya ingin faham pengalaman ini dari sudut pandang awak.", type: "empathy" },
+            { text: "Perasaan awak itu valid berdasarkan apa yang awak dah lalui.", type: "empathy" },
+            { text: "Boleh awak ceritakan sedikit lagi tentang bahagian yang paling mencabar bagi awak?", type: "empathy" },
+            { text: "Saya dengar betapa sukarnya situasi ini untuk awak.", type: "empathy" },
+            { text: "Awak tidak bersendirian dalam sesi ini, kita boleh lihat perkara ini bersama.", type: "empathy" },
+            { text: "Saya menghargai keberanian awak bercakap tentang perkara ini.", type: "empathy" },
+            { text: "Apa yang awak rasa sekarang penting untuk kita beri ruang.", type: "empathy" },
+            { text: "Kita boleh ambil masa perlahan-lahan, tidak perlu tergesa-gesa.", type: "empathy" },
+            { text: "Bagaimana saya boleh menyokong awak dengan cara yang paling membantu buat awak?", type: "empathy" }
+        ];
+
+        let isGameRunning = false;
+        let selectedCell = null; // Untuk simpan cell pertama yang diklik masa swap
+
+        // 1. Init Grid (Rawak Awal)
+        function initGame() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            // Kocok data awal supaya tak sama setiap kali refresh
+            let gameData = [...data].sort(() => 0.5 - Math.random()); 
+
+            gameData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'bingo-cell';
+                div.innerText = item.text;
+                div.dataset.type = item.type; // Simpan jawapan rahsia
+                div.onclick = () => handleCellClick(div);
+                grid.appendChild(div);
+            });
+        }
+
+        // 2. Logic Klik (Berubah ikut Fasa)
+        function handleCellClick(cell) {
+            // FASA 1: SUSUN (SWAP)
+            if (!isGameRunning) {
+                if (selectedCell === null) {
+                    // Pilih cell pertama
+                    selectedCell = cell;
+                    cell.classList.add('selected');
+                } else if (selectedCell === cell) {
+                    // Klik diri sendiri = Batal
+                    selectedCell.classList.remove('selected');
+                    selectedCell = null;
+                } else {
+                    // Pilih cell kedua -> SWAP!
+                    swapContent(selectedCell, cell);
+                    selectedCell.classList.remove('selected');
+                    selectedCell = null;
+                }
+            } 
+            // FASA 2: MAIN (TANDA)
+            else {
+                // Toggle tanda X (hanya jika belum reveal jawapan)
+                if (!cell.classList.contains('reveal-micro') && !cell.classList.contains('reveal-empathy')) {
+                    cell.classList.toggle('marked');
+                }
+            }
+        }
+
+        // Fungsi Tukar Kandungan Dua Petak
+        function swapContent(cellA, cellB) {
+            // Tukar Text
+            const tempText = cellA.innerText;
+            cellA.innerText = cellB.innerText;
+            cellB.innerText = tempText;
+
+            // Tukar Data Type (Jawapan)
+            const tempType = cellA.dataset.type;
+            cellA.dataset.type = cellB.dataset.type;
+            cellB.dataset.type = tempType;
+
+            // Efek Visual
+            cellA.classList.add('swapped');
+            cellB.classList.add('swapped');
+            setTimeout(() => {
+                cellA.classList.remove('swapped');
+                cellB.classList.remove('swapped');
+            }, 300);
+        }
+
+        // 3. Mula Permainan (Lock Grid)
+        function startGame() {
+            if(!confirm("Anda puas hati dengan susunan ini?")) return;
+
+            isGameRunning = true;
+            document.body.classList.remove('mode-arrange');
+            document.body.classList.add('mode-play');
+            
+            // Buang sebarang selection jika ada tertinggal
+            if(selectedCell) selectedCell.classList.remove('selected');
+            selectedCell = null;
+
+            // Update UI
+            document.getElementById('instruction').innerText = "Fasa 2: Klik petak jika ayat itu MIKRO-AGRESI.";
+            document.getElementById('instruction').style.background = "#27ae60"; // Tukar hijau tanda Go
+            document.getElementById('btnStart').style.display = 'none';
+            document.getElementById('btnCheck').style.display = 'inline-block';
+        }
+
+        // 4. Semak Jawapan (End Game)
+        function revealAnswers() {
+            if(!confirm("Semak jawapan sekarang?")) return;
+
+            const cells = document.querySelectorAll('.bingo-cell');
+            cells.forEach(cell => {
+                // Buang tanda X user
+                cell.classList.remove('marked');
+
+                // Tunjuk warna sebenar
+                if (cell.dataset.type === 'micro') {
+                    cell.classList.add('reveal-micro');
+                } else {
+                    cell.classList.add('reveal-empathy');
+                }
+            });
+
+            document.getElementById('instruction').innerText = "MERAH = Mikro-Agresi | HIJAU = Empati";
+            document.getElementById('btnCheck').disabled = true;
+        }
+
+        // Jalankan
+        initGame();
+
+    </script>
+</body>
+</html>
