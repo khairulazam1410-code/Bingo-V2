@@ -3,261 +3,383 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bingo Kaunselor: Susun Sendiri</title>
+    <title>Bingo: Empati vs Mikro-Agresi</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #ecf0f1;
-            text-align: center;
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #2c3e50; 
+            text-align: center; 
+            margin: 0; 
             padding: 10px;
-            margin: 0;
-            user-select: none; /* Elak text highlight masa main */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            color: white;
         }
 
-        h1 { color: #2c3e50; margin: 10px 0 5px; font-size: 1.5rem; text-transform: uppercase; }
+        h1 { font-size: 1.4rem; margin: 5px 0; color: #f1c40f; text-transform: uppercase; }
+        p#instruction { font-size: 0.95rem; margin: 0 0 15px 0; color: #bdc3c7; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px; }
+
+        /* GRID AREA */
+        .grid-area {
+            flex: 0 0 auto;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
         
-        /* Status Bar untuk Arahan */
-        .status-bar {
-            background: #34495e; color: #f1c40f; 
-            padding: 10px; margin-bottom: 15px; 
-            border-radius: 5px; font-size: 0.9rem; font-weight: bold;
-        }
-
-        /* GRID BINGO */
-        .bingo-container {
+        .bingo-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 4px;
-            max-width: 600px;
+            max-width: 500px; /* Lebar sikit supaya teks muat */
             margin: 0 auto;
-            background: #95a5a6;
+            background: #34495e;
             padding: 5px;
-            border-radius: 10px;
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
 
-        /* PETAK */
-        .bingo-cell {
+        .cell {
             background: white;
-            aspect-ratio: 1 / 1;
+            color: #2c3e50;
+            border: 1px solid #95a5a6;
+            aspect-ratio: 1; 
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 3px;
-            font-size: 0.65rem; /* Font compact */
-            font-weight: 600;
-            color: #34495e;
-            border-radius: 4px;
+            font-size: 8px; /* Font kecil untuk muat ayat panjang */
+            padding: 2px;
+            text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-            overflow: hidden;
-            word-wrap: break-word;
+            border-radius: 4px;
             line-height: 1.1;
-            box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+            position: relative;
+            user-select: none;
+            transition: transform 0.1s, background 0.2s;
+            word-break: break-word;
+            font-weight: 600;
         }
 
-        /* FASA 1: MODE SUSUN (SWAP) */
-        .mode-arrange .bingo-cell:active { transform: scale(0.9); }
-        .mode-arrange .selected {
-            background-color: #f1c40f !important;
-            color: #2c3e50 !important;
-            border: 2px solid #e67e22;
+        .cell:active { transform: scale(0.95); }
+        
+        /* FASA SUSUN */
+        .cell.empty { background: #ecf0f1; color: #bdc3c7; font-size: 16px; font-weight: bold; }
+        .cell.target-mode { background: #fff3cd; border: 2px dashed #f1c40f; animation: pulse 0.8s infinite; color: #333; }
+        
+        /* FASA MAIN: TANDA MERAH */
+        .cell.marked { 
+            background: #e74c3c; 
+            color: white; 
+            border-color: #c0392b; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        /* MENANG: HIJAU */
+        .cell.winner {
+            background: #2ecc71 !important;
+            color: white !important;
+            border-color: #27ae60 !important;
             transform: scale(1.05);
             z-index: 10;
+            box-shadow: 0 0 15px #2ecc71;
         }
 
-        /* FASA 2: MODE MAIN (MARK) */
-        .mode-play .marked {
-            background-color: #7f8c8d !important;
-            color: white !important;
-            position: relative;
+        /* BANK AYAT (BAWAH) */
+        .word-bank-container {
+            flex: 1;
+            background: #ecf0f1;
+            border-top: 5px solid #f1c40f;
+            overflow-y: auto;
+            padding: 15px;
+            border-radius: 20px 20px 0 0;
+            color: #333;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
         }
-        .mode-play .marked::after {
-            content: "❌"; position: absolute; 
-            font-size: 2rem; opacity: 0.4;
+
+        .word-item {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 25px;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid transparent;
+            transition: all 0.2s;
         }
 
-        /* FASA 3: SEMAK (WARNA) */
-        .reveal-micro { background-color: #e74c3c !important; color: white !important; border: 2px solid #c0392b; }
-        .reveal-empathy { background-color: #2ecc71 !important; color: white !important; border: 2px solid #27ae60; }
+        .word-item:hover { transform: translateY(-2px); }
+        .word-item.selected { background: #2c3e50; transform: scale(0.95); border-color: #f1c40f; color: #f1c40f; }
 
-        /* BUTTONS */
-        .controls {
-            margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding-bottom: 30px;
+        /* BUTANG MULA */
+        .btn-start {
+            display: none;
+            width: 90%;
+            padding: 15px;
+            background: #27ae60;
+            color: white;
+            font-size: 1.2rem;
+            border: none;
+            font-weight: bold;
+            position: fixed;
+            bottom: 20px; left: 5%;
+            z-index: 100;
+            cursor: pointer;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            animation: bounce 2s infinite;
         }
-        button {
-            padding: 12px 25px; font-size: 1rem; border: none; border-radius: 50px;
-            font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            transition: transform 0.1s;
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+        
+        /* STATE CLASS */
+        body.playing .word-bank-container { display: none; }
+        body.playing .grid-area { margin-top: 50px; transform: scale(1.05); }
+
+        /* MODAL MENANG */
+        #winModal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            z-index: 200;
+            text-align: center;
+            border: 4px solid #f1c40f;
+            box-shadow: 0 0 50px rgba(241, 196, 15, 0.5);
+            width: 80%;
         }
-        button:active { transform: translateY(2px); box-shadow: none; }
-        button:disabled { background: #bdc3c7; color: #7f8c8d; cursor: not-allowed; box-shadow: none; }
-
-        .btn-start { background: #f1c40f; color: #2c3e50; }
-        .btn-check { background: #34495e; color: white; display: none; } /* Sorok awal2 */
-
-        /* Animasi Swap */
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        .swapped { animation: pop 0.3s ease; }
-
     </style>
 </head>
-<body class="mode-arrange"> <h1>Bingo Kaunselor</h1>
-    <div class="status-bar" id="instruction">
-        Fasa 1: Klik dua petak untuk TUKAR tempat.
+<body>
+
+    <h1 id="statusTitle">Fasa 1: Susun Kad</h1>
+    <p id="instruction">Klik ayat di bawah, kemudian klik petak kosong.</p>
+
+    <div class="grid-area">
+        <div class="bingo-grid" id="grid"></div>
     </div>
 
-    <div class="bingo-container" id="grid"></div>
+    <div class="word-bank-container" id="bankArea">
+        <h4 style="margin-top:0; color:#7f8c8d;">Pilihan Ayat:</h4>
+        <div id="wordBank"></div>
+    </div>
 
-    <div class="controls">
-        <button id="btnStart" class="btn-start" onclick="startGame()">🔒 Kunci & Mula Main</button>
-        <button id="btnCheck" class="btn-check" onclick="revealAnswers()">📝 Semak Jawapan</button>
+    <button id="startBtn" class="btn-start" onclick="startGame()">MULA MAIN BINGO! ▶</button>
+
+    <div id="winModal">
+        <div style="font-size:4rem;">🏆</div>
+        <h1 style="color:#f1c40f; font-size:2.5rem; margin:10px 0;">BINGO!</h1>
+        <p style="color:white; font-size:1.2rem;">Tahniah, anda peka!</p>
+        <button onclick="closeModal()" style="padding:12px 30px; background:white; color:#2c3e50; border:none; border-radius:50px; font-weight:bold; cursor:pointer; font-size:1rem;">Tutup</button>
     </div>
 
     <script>
-        // DATA PENUH (25 AYAT: 14 Micro + 11 Empati)
-        const data = [
-            // MICRO (14)
-            { text: "Saya faham perasaan awak, tetapi mungkin situasi ini tidaklah seteruk yang awak fikirkan.", type: "micro" },
-            { text: "Ramai klien lain pernah melalui perkara yang sama.", type: "micro" },
-            { text: "Tak apa, semuanya akan baik-baik saja.", type: "micro" },
-            { text: "Awak jangan risau sangat, lama-lama perasaan ini akan reda.", type: "micro" },
-            { text: "Cubalah fikir secara lebih positif tentang perkara ini.", type: "micro" },
-            { text: "Kita tidak boleh ubah apa yang telah berlaku, jadi lebih baik kita terima.", type: "micro" },
-            { text: "Sebagai orang dewasa, awak sepatutnya boleh mengurus perasaan ini dengan lebih baik.", type: "micro" },
-            { text: "Mari kita bincangkan perkara ini secara lebih rasional.", type: "micro" },
-            { text: "Cuba kawal emosi supaya sesi ini lebih produktif.", type: "micro" },
-            { text: "Dalam budaya awak, perkara seperti ini biasanya diterima, bukan?", type: "micro" },
-            { text: "Awak nampak tenang, jadi saya anggap awak sudah boleh menerimanya.", type: "micro" },
-            { text: "Ramai orang lain menghadapi perkara yang lebih berat daripada ini.", type: "micro" },
-            { text: "Mungkin ini ujian untuk menjadikan awak lebih kuat.", type: "micro" },
-            { text: "Doa dan kesabaran mungkin lebih penting daripada terlalu memikirkan perasaan ini.", type: "micro" },
-
-            // EMPATI (11)
-            { text: "Terima kasih kerana mempercayai saya untuk berkongsi perkara ini.", type: "empathy" },
-            { text: "Apa yang awak alami kedengaran sangat memberi kesan kepada awak.", type: "empathy" },
-            { text: "Saya ingin faham pengalaman ini dari sudut pandang awak.", type: "empathy" },
-            { text: "Perasaan awak itu valid berdasarkan apa yang awak dah lalui.", type: "empathy" },
-            { text: "Boleh awak ceritakan sedikit lagi tentang bahagian yang paling mencabar bagi awak?", type: "empathy" },
-            { text: "Saya dengar betapa sukarnya situasi ini untuk awak.", type: "empathy" },
-            { text: "Awak tidak bersendirian dalam sesi ini, kita boleh lihat perkara ini bersama.", type: "empathy" },
-            { text: "Saya menghargai keberanian awak bercakap tentang perkara ini.", type: "empathy" },
-            { text: "Apa yang awak rasa sekarang penting untuk kita beri ruang.", type: "empathy" },
-            { text: "Kita boleh ambil masa perlahan-lahan, tidak perlu tergesa-gesa.", type: "empathy" },
-            { text: "Bagaimana saya boleh menyokong awak dengan cara yang paling membantu buat awak?", type: "empathy" }
+        // === DATA AYAT (25 TOTAL) ===
+        const sentences = [
+            // Mikro-Agresi
+            "Saya faham, tapi mungkin ini tak seteruk yang awak fikir.",
+            "Ramai klien lain pernah alami perkara sama.",
+            "Tak apa, nanti semuanya akan okey.",
+            "Jangan risau sangat, lama-lama perasaan itu reda.",
+            "Cuba fikir lebih positif tentang perkara ini.",
+            "Kita tak boleh ubah apa yang berlaku, jadi terima saja.",
+            "Sebagai orang dewasa, awak patut boleh urus perasaan ini.",
+            "Mari kita bincang perkara ini secara lebih rasional.",
+            "Cuba kawal emosi supaya sesi lebih produktif.",
+            "Dalam budaya awak, perkara ini biasa, kan?",
+            "Awak nampak tenang, jadi saya rasa awak dah boleh terima.",
+            "Ramai orang lain hadapi perkara yang lebih berat.",
+            "Mungkin ini ujian untuk kuatkan awak.",
+            "Doa dan sabar mungkin lebih penting daripada perasaan ini.",
+            // Empati Humanistik
+            "Terima kasih kerana mempercayai saya dengan cerita ini.",
+            "Apa yang awak alami memang beri kesan besar.",
+            "Saya ingin faham pengalaman ini dari sudut awak.",
+            "Perasaan awak masuk akal dengan apa yang berlaku.",
+            "Bahagian mana paling mencabar untuk awak?",
+            "Saya dengar betapa sukarnya situasi ini.",
+            "Awak tak bersendirian, kita boleh hadapi ini bersama.",
+            "Saya hargai keberanian awak berkongsi.",
+            "Apa yang awak rasa sekarang penting.",
+            "Kita boleh ambil masa, tak perlu tergesa-gesa.",
+            "Bagaimana saya boleh sokong awak dengan lebih baik?"
         ];
 
-        let isGameRunning = false;
-        let selectedCell = null; // Untuk simpan cell pertama yang diklik masa swap
+        let gridData = Array(25).fill(null);
+        let currentSelection = null;
+        let isPlaying = false;
+        let hasWon = false; 
 
-        // 1. Init Grid (Rawak Awal)
-        function initGame() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
-            
-            // Kocok data awal supaya tak sama setiap kali refresh
-            let gameData = [...data].sort(() => 0.5 - Math.random()); 
+        const gridEl = document.getElementById('grid');
+        const bankEl = document.getElementById('wordBank');
+        const startBtn = document.getElementById('startBtn');
+        const titleEl = document.getElementById('statusTitle');
+        const insEl = document.getElementById('instruction');
 
-            gameData.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'bingo-cell';
-                div.innerText = item.text;
-                div.dataset.type = item.type; // Simpan jawapan rahsia
-                div.onclick = () => handleCellClick(div);
-                grid.appendChild(div);
+        function init() { renderGrid(); renderBank(); }
+
+        // --- FUNGSI RENDER GRID ---
+        function renderGrid() {
+            gridEl.innerHTML = '';
+            gridData.forEach((text, i) => {
+                let div = document.createElement('div');
+                if (text) {
+                    div.className = 'cell filled';
+                    div.innerText = text;
+                } else {
+                    div.className = 'cell empty';
+                    div.innerHTML = '+';
+                    if (currentSelection) div.classList.add('target-mode');
+                }
+                div.id = `cell-${i}`;
+                div.onclick = () => handleGridClick(i);
+                gridEl.appendChild(div);
+            });
+            checkFull();
+        }
+
+        // --- FUNGSI RENDER BANK AYAT ---
+        function renderBank() {
+            bankEl.innerHTML = '';
+            sentences.forEach(text => {
+                if (!gridData.includes(text)) {
+                    let btn = document.createElement('div');
+                    btn.className = 'word-item';
+                    if (currentSelection === text) btn.classList.add('selected');
+                    btn.innerText = text;
+                    btn.onclick = () => selectWord(text);
+                    bankEl.appendChild(btn);
+                }
             });
         }
 
-        // 2. Logic Klik (Berubah ikut Fasa)
-        function handleCellClick(cell) {
-            // FASA 1: SUSUN (SWAP)
-            if (!isGameRunning) {
-                if (selectedCell === null) {
-                    // Pilih cell pertama
-                    selectedCell = cell;
-                    cell.classList.add('selected');
-                } else if (selectedCell === cell) {
-                    // Klik diri sendiri = Batal
-                    selectedCell.classList.remove('selected');
-                    selectedCell = null;
-                } else {
-                    // Pilih cell kedua -> SWAP!
-                    swapContent(selectedCell, cell);
-                    selectedCell.classList.remove('selected');
-                    selectedCell = null;
-                }
-            } 
-            // FASA 2: MAIN (TANDA)
-            else {
-                // Toggle tanda X (hanya jika belum reveal jawapan)
-                if (!cell.classList.contains('reveal-micro') && !cell.classList.contains('reveal-empathy')) {
-                    cell.classList.toggle('marked');
-                }
+        // Pilih ayat dari bank
+        function selectWord(text) {
+            if (isPlaying) return;
+            currentSelection = text;
+            renderBank();
+            renderGrid();
+            insEl.innerText = "Sekarang, klik mana-mana kotak kosong di atas.";
+            insEl.style.color = "#f1c40f";
+        }
+
+        // Klik pada Grid
+        function handleGridClick(index) {
+            // JIKA SEDANG MAIN (FASA 2)
+            if (isPlaying) {
+                let cell = document.getElementById(`cell-${index}`);
+                cell.classList.toggle('marked'); // Tanda Merah
+                checkBingoWin(); // Semak kalau menang
+                return;
+            }
+
+            // JIKA SEDANG SUSUN (FASA 1)
+            if (gridData[index]) {
+                // Kalau dah ada isi, buang balik ke bank (Tendang)
+                gridData[index] = null;
+                renderGrid(); renderBank();
+                insEl.innerText = "Ayat dikembalikan ke senarai. Pilih semula.";
+                insEl.style.color = "#e74c3c";
+            } else if (currentSelection) {
+                // Kalau kosong dan ada selection, isi
+                gridData[index] = currentSelection;
+                currentSelection = null;
+                renderGrid(); renderBank();
+                insEl.innerText = "Pilih ayat seterusnya di bawah...";
+                insEl.style.color = "#bdc3c7";
             }
         }
 
-        // Fungsi Tukar Kandungan Dua Petak
-        function swapContent(cellA, cellB) {
-            // Tukar Text
-            const tempText = cellA.innerText;
-            cellA.innerText = cellB.innerText;
-            cellB.innerText = tempText;
-
-            // Tukar Data Type (Jawapan)
-            const tempType = cellA.dataset.type;
-            cellA.dataset.type = cellB.dataset.type;
-            cellB.dataset.type = tempType;
-
-            // Efek Visual
-            cellA.classList.add('swapped');
-            cellB.classList.add('swapped');
-            setTimeout(() => {
-                cellA.classList.remove('swapped');
-                cellB.classList.remove('swapped');
-            }, 300);
+        // Semak jika semua 25 kotak penuh
+        function checkFull() {
+            if (!gridData.includes(null) && !isPlaying) {
+                startBtn.style.display = 'block';
+                insEl.innerText = "Grid penuh! Tekan butang MULA MAIN.";
+                insEl.style.color = "#2ecc71";
+            } else {
+                startBtn.style.display = 'none';
+            }
         }
 
-        // 3. Mula Permainan (Lock Grid)
+        // Mula Permainan
         function startGame() {
-            if(!confirm("Anda puas hati dengan susunan ini?")) return;
-
-            isGameRunning = true;
-            document.body.classList.remove('mode-arrange');
-            document.body.classList.add('mode-play');
-            
-            // Buang sebarang selection jika ada tertinggal
-            if(selectedCell) selectedCell.classList.remove('selected');
-            selectedCell = null;
-
-            // Update UI
-            document.getElementById('instruction').innerText = "Fasa 2: Klik petak jika ayat itu MIKRO-AGRESI.";
-            document.getElementById('instruction').style.background = "#27ae60"; // Tukar hijau tanda Go
-            document.getElementById('btnStart').style.display = 'none';
-            document.getElementById('btnCheck').style.display = 'inline-block';
+            if(!confirm("Kunci susunan kad dan mula main?")) return;
+            isPlaying = true;
+            document.body.classList.add('playing');
+            titleEl.innerText = "Fasa 2: Main Bingo!";
+            insEl.innerText = "Dengar situasi. Klik kotak jika ada ayat tersebut.";
+            startBtn.style.display = 'none';
+            renderGrid(); // Render semula untuk buang class target-mode
         }
 
-        // 4. Semak Jawapan (End Game)
-        function revealAnswers() {
-            if(!confirm("Semak jawapan sekarang?")) return;
+        // --- LOGIK KEMENANGAN & BUNGA API ---
+        function checkBingoWin() {
+            const winPatterns = [
+                [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], // Baris
+                [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], // Lajur
+                [0,6,12,18,24], [4,8,12,16,20] // Silang
+            ];
 
-            const cells = document.querySelectorAll('.bingo-cell');
-            cells.forEach(cell => {
-                // Buang tanda X user
-                cell.classList.remove('marked');
+            let winningPatternFound = false;
 
-                // Tunjuk warna sebenar
-                if (cell.dataset.type === 'micro') {
-                    cell.classList.add('reveal-micro');
-                } else {
-                    cell.classList.add('reveal-empathy');
+            for (let pattern of winPatterns) {
+                const isWin = pattern.every(index => 
+                    document.getElementById(`cell-${index}`).classList.contains('marked')
+                );
+
+                if (isWin) {
+                    winningPatternFound = true;
+                    pattern.forEach(index => {
+                        document.getElementById(`cell-${index}`).classList.add('winner');
+                    });
                 }
-            });
+            }
 
-            document.getElementById('instruction').innerText = "MERAH = Mikro-Agresi | HIJAU = Empati";
-            document.getElementById('btnCheck').disabled = true;
+            if (winningPatternFound && !hasWon) {
+                hasWon = true;
+                fireFireworks();
+                setTimeout(() => {
+                    document.getElementById('winModal').style.display = 'block';
+                }, 500);
+            }
         }
 
-        // Jalankan
-        initGame();
+        function fireFireworks() {
+            var duration = 5 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 300 };
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+        
+        function closeModal() {
+            document.getElementById('winModal').style.display = 'none';
+        }
+
+        // Mula App
+        init();
 
     </script>
 </body>
