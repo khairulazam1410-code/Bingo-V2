@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bingo: Empati vs Mikro-Agresi</title>
+    <title>Bingo Kaunselor: Susun Sendiri</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { 
@@ -17,107 +17,120 @@
             height: 100vh;
             box-sizing: border-box;
             color: white;
+            overflow: hidden; 
         }
 
-        h1 { font-size: 1.4rem; margin: 5px 0; color: #f1c40f; text-transform: uppercase; }
-        p#instruction { font-size: 0.95rem; margin: 0 0 15px 0; color: #bdc3c7; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px; }
+        h1 { font-size: 1.2rem; margin: 5px 0; color: #f1c40f; text-transform: uppercase; }
+        
+        .status-bar {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #bdc3c7;
+            border: 1px solid #34495e;
+        }
 
         /* GRID AREA */
-        .grid-area {
+        .grid-container {
             flex: 0 0 auto;
             margin-bottom: 10px;
-            position: relative;
-            z-index: 2;
         }
-        
+
         .bingo-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 4px;
-            max-width: 500px; /* Lebar sikit supaya teks muat */
+            gap: 3px;
+            max-width: 100%;
+            aspect-ratio: 1; 
             margin: 0 auto;
             background: #34495e;
             padding: 5px;
             border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .cell {
-            background: white;
-            color: #2c3e50;
+            background: #ecf0f1;
+            color: #bdc3c7;
             border: 1px solid #95a5a6;
-            aspect-ratio: 1; 
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8px; /* Font kecil untuk muat ayat panjang */
+            font-size: 9px; /* Teks kecil supaya muat */
             padding: 2px;
             text-align: center;
             cursor: pointer;
             border-radius: 4px;
             line-height: 1.1;
-            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
             position: relative;
             user-select: none;
-            transition: transform 0.1s, background 0.2s;
             word-break: break-word;
-            font-weight: 600;
+            font-weight: bold;
+            height: 100%;
         }
 
-        .cell:active { transform: scale(0.95); }
+        .cell.empty::after { content: "+"; font-size: 1.5rem; opacity: 0.3; }
         
-        /* FASA SUSUN */
-        .cell.empty { background: #ecf0f1; color: #bdc3c7; font-size: 16px; font-weight: bold; }
-        .cell.target-mode { background: #fff3cd; border: 2px dashed #f1c40f; animation: pulse 0.8s infinite; color: #333; }
-        
-        /* FASA MAIN: TANDA MERAH */
+        .cell.filled { 
+            background: white; 
+            color: #2c3e50; 
+            border-color: #3498db;
+            box-shadow: 0 2px 0 #2980b9;
+        }
+
+        .cell.target-mode { 
+            background: #ffeaa7; 
+            border: 2px dashed #f1c40f; 
+            animation: pulse 0.8s infinite; 
+            color: #333;
+        }
+
         .cell.marked { 
-            background: #e74c3c; 
-            color: white; 
-            border-color: #c0392b; 
+            background: #e74c3c !important; 
+            color: white !important; 
+            border-color: #c0392b !important; 
             box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
         }
 
-        /* MENANG: HIJAU */
         .cell.winner {
             background: #2ecc71 !important;
             color: white !important;
             border-color: #27ae60 !important;
-            transform: scale(1.05);
-            z-index: 10;
+            transform: scale(1.1);
+            z-index: 100;
             box-shadow: 0 0 15px #2ecc71;
         }
 
-        /* BANK AYAT (BAWAH) */
-        .word-bank-container {
-            flex: 1;
+        /* BANK AYAT */
+        .bank-area {
+            flex: 1; 
             background: #ecf0f1;
-            border-top: 5px solid #f1c40f;
-            overflow-y: auto;
-            padding: 15px;
-            border-radius: 20px 20px 0 0;
+            border-top: 4px solid #f1c40f;
+            border-radius: 15px 15px 0 0;
+            padding: 10px;
+            overflow-y: auto; 
             color: #333;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+            text-align: left;
         }
 
         .word-item {
             display: inline-block;
             background: #3498db;
             color: white;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 25px;
-            font-size: 12px;
+            padding: 8px 12px;
+            margin: 4px;
+            border-radius: 20px;
+            font-size: 11px;
             cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            border: 2px solid transparent;
-            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
         }
 
-        .word-item:hover { transform: translateY(-2px); }
-        .word-item.selected { background: #2c3e50; transform: scale(0.95); border-color: #f1c40f; color: #f1c40f; }
+        .word-item:active { transform: scale(0.95); }
+        .word-item.selected { background: #2c3e50; border: 2px solid #f1c40f; color: #f1c40f; transform: scale(0.95); }
 
-        /* BUTANG MULA */
         .btn-start {
             display: none;
             width: 90%;
@@ -129,7 +142,7 @@
             font-weight: bold;
             position: fixed;
             bottom: 20px; left: 5%;
-            z-index: 100;
+            z-index: 200;
             cursor: pointer;
             border-radius: 50px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
@@ -137,24 +150,22 @@
         }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
-        
-        /* STATE CLASS */
-        body.playing .word-bank-container { display: none; }
-        body.playing .grid-area { margin-top: 50px; transform: scale(1.05); }
+        @keyframes bounce { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
 
-        /* MODAL MENANG */
+        body.playing .bank-area { display: none; }
+        body.playing .grid-container { margin-top: 50px; transform: scale(1.05); }
+
         #winModal {
             display: none;
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            z-index: 200;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 300;
             text-align: center;
-            border: 4px solid #f1c40f;
+            border: 2px solid #f1c40f;
             box-shadow: 0 0 50px rgba(241, 196, 15, 0.5);
             width: 80%;
         }
@@ -162,15 +173,19 @@
 </head>
 <body>
 
-    <h1 id="statusTitle">Fasa 1: Susun Kad</h1>
-    <p id="instruction">Klik ayat di bawah, kemudian klik petak kosong.</p>
+    <h1 id="pageTitle">Langkah 1: Susun Kad</h1>
+    <div class="status-bar" id="instruction">
+        Pilih ayat di bawah, kemudian klik petak kosong.
+    </div>
 
-    <div class="grid-area">
+    <div class="grid-container">
         <div class="bingo-grid" id="grid"></div>
     </div>
 
-    <div class="word-bank-container" id="bankArea">
-        <h4 style="margin-top:0; color:#7f8c8d;">Pilihan Ayat:</h4>
+    <div class="bank-area" id="bankArea">
+        <div style="font-size:0.8rem; color:#7f8c8d; margin-bottom:10px; font-weight:bold;">
+            BANK AYAT (<span id="itemsLeft">25</span> baki):
+        </div>
         <div id="wordBank"></div>
     </div>
 
@@ -178,13 +193,13 @@
 
     <div id="winModal">
         <div style="font-size:4rem;">🏆</div>
-        <h1 style="color:#f1c40f; font-size:2.5rem; margin:10px 0;">BINGO!</h1>
-        <p style="color:white; font-size:1.2rem;">Tahniah, anda peka!</p>
-        <button onclick="closeModal()" style="padding:12px 30px; background:white; color:#2c3e50; border:none; border-radius:50px; font-weight:bold; cursor:pointer; font-size:1rem;">Tutup</button>
+        <h1 style="color:#f1c40f; font-size:2rem; margin:10px 0;">BINGO!</h1>
+        <p style="color:white; font-size:1rem;">Tahniah! Anda peka dengan emosi.</p>
+        <button onclick="closeModal()" style="padding:10px 25px; background:white; color:#2c3e50; border:none; border-radius:50px; font-weight:bold; cursor:pointer; margin-top:10px;">Tutup</button>
     </div>
 
     <script>
-        // === DATA AYAT (25 TOTAL) ===
+        // === DATA 25 AYAT BARU ===
         const sentences = [
             // Mikro-Agresi
             "Saya faham, tapi mungkin ini tak seteruk yang awak fikir.",
@@ -201,38 +216,43 @@
             "Ramai orang lain hadapi perkara yang lebih berat.",
             "Mungkin ini ujian untuk kuatkan awak.",
             "Doa dan sabar mungkin lebih penting daripada perasaan ini.",
+            "Saya rasa awak sebenarnya lebih kuat daripada yang awak sangka.",
+            "Mungkin awak belum bersedia untuk lepaskan perkara ini.",
+            "Awak rasa begini mungkin sebab keadaan emosi awak sekarang.",
+            "Mungkin masa akan membantu awak rasa lebih baik.",
+            "Kalau awak lihat dari sudut lain, mungkin ia tak begitu berat.",
             // Empati Humanistik
-            "Terima kasih kerana mempercayai saya dengan cerita ini.",
             "Apa yang awak alami memang beri kesan besar.",
             "Saya ingin faham pengalaman ini dari sudut awak.",
-            "Perasaan awak masuk akal dengan apa yang berlaku.",
-            "Bahagian mana paling mencabar untuk awak?",
-            "Saya dengar betapa sukarnya situasi ini.",
-            "Awak tak bersendirian, kita boleh hadapi ini bersama.",
+            "Saya dengar betapa sukarnya situasi ini untuk awak.",
             "Saya hargai keberanian awak berkongsi.",
             "Apa yang awak rasa sekarang penting.",
-            "Kita boleh ambil masa, tak perlu tergesa-gesa.",
-            "Bagaimana saya boleh sokong awak dengan lebih baik?"
+            "Kita boleh ambil masa, tak perlu tergesa-gesa."
         ];
 
         let gridData = Array(25).fill(null);
+        let bankData = [...sentences];
         let currentSelection = null;
         let isPlaying = false;
-        let hasWon = false; 
+        let hasWon = false;
 
         const gridEl = document.getElementById('grid');
         const bankEl = document.getElementById('wordBank');
+        const itemsLeftEl = document.getElementById('itemsLeft');
         const startBtn = document.getElementById('startBtn');
-        const titleEl = document.getElementById('statusTitle');
+        const titleEl = document.getElementById('pageTitle');
         const insEl = document.getElementById('instruction');
 
-        function init() { renderGrid(); renderBank(); }
+        function init() {
+            renderGrid();
+            renderBank();
+        }
 
-        // --- FUNGSI RENDER GRID ---
         function renderGrid() {
             gridEl.innerHTML = '';
             gridData.forEach((text, i) => {
                 let div = document.createElement('div');
+                div.id = `cell-${i}`;
                 if (text) {
                     div.className = 'cell filled';
                     div.innerText = text;
@@ -241,93 +261,88 @@
                     div.innerHTML = '+';
                     if (currentSelection) div.classList.add('target-mode');
                 }
-                div.id = `cell-${i}`;
                 div.onclick = () => handleGridClick(i);
                 gridEl.appendChild(div);
             });
             checkFull();
         }
 
-        // --- FUNGSI RENDER BANK AYAT ---
         function renderBank() {
             bankEl.innerHTML = '';
-            sentences.forEach(text => {
-                if (!gridData.includes(text)) {
-                    let btn = document.createElement('div');
-                    btn.className = 'word-item';
-                    if (currentSelection === text) btn.classList.add('selected');
-                    btn.innerText = text;
-                    btn.onclick = () => selectWord(text);
-                    bankEl.appendChild(btn);
-                }
+            itemsLeftEl.innerText = bankData.length;
+            bankData.forEach(text => {
+                let btn = document.createElement('div');
+                btn.className = 'word-item';
+                if (currentSelection === text) btn.classList.add('selected');
+                btn.innerText = text;
+                btn.onclick = () => selectWord(text);
+                bankEl.appendChild(btn);
             });
         }
 
-        // Pilih ayat dari bank
         function selectWord(text) {
             if (isPlaying) return;
             currentSelection = text;
             renderBank();
             renderGrid();
-            insEl.innerText = "Sekarang, klik mana-mana kotak kosong di atas.";
+            insEl.innerText = "Sekarang klik mana-mana kotak KOSONG di atas.";
             insEl.style.color = "#f1c40f";
         }
 
-        // Klik pada Grid
         function handleGridClick(index) {
-            // JIKA SEDANG MAIN (FASA 2)
             if (isPlaying) {
                 let cell = document.getElementById(`cell-${index}`);
-                cell.classList.toggle('marked'); // Tanda Merah
-                checkBingoWin(); // Semak kalau menang
+                cell.classList.toggle('marked');
+                checkBingoWin();
                 return;
             }
 
-            // JIKA SEDANG SUSUN (FASA 1)
             if (gridData[index]) {
-                // Kalau dah ada isi, buang balik ke bank (Tendang)
+                let textToReturn = gridData[index];
                 gridData[index] = null;
-                renderGrid(); renderBank();
-                insEl.innerText = "Ayat dikembalikan ke senarai. Pilih semula.";
+                bankData.push(textToReturn);
+                bankData.sort();
+                renderGrid();
+                renderBank();
+                insEl.innerText = "Ayat dikembalikan. Pilih semula.";
                 insEl.style.color = "#e74c3c";
             } else if (currentSelection) {
-                // Kalau kosong dan ada selection, isi
                 gridData[index] = currentSelection;
+                bankData = bankData.filter(t => t !== currentSelection);
                 currentSelection = null;
-                renderGrid(); renderBank();
-                insEl.innerText = "Pilih ayat seterusnya di bawah...";
+                renderGrid();
+                renderBank();
+                insEl.innerText = "Pilih ayat seterusnya...";
                 insEl.style.color = "#bdc3c7";
             }
         }
 
-        // Semak jika semua 25 kotak penuh
         function checkFull() {
-            if (!gridData.includes(null) && !isPlaying) {
+            if (bankData.length === 0 && !isPlaying) {
                 startBtn.style.display = 'block';
-                insEl.innerText = "Grid penuh! Tekan butang MULA MAIN.";
+                insEl.innerText = "Grid penuh! Tekan butang hijau untuk mula.";
                 insEl.style.color = "#2ecc71";
             } else {
                 startBtn.style.display = 'none';
             }
         }
 
-        // Mula Permainan
         function startGame() {
-            if(!confirm("Kunci susunan kad dan mula main?")) return;
+            if(!confirm("Kunci susunan dan mula main?")) return;
             isPlaying = true;
             document.body.classList.add('playing');
             titleEl.innerText = "Fasa 2: Main Bingo!";
-            insEl.innerText = "Dengar situasi. Klik kotak jika ada ayat tersebut.";
+            insEl.innerText = "Dengar situasi. Klik kotak untuk tanda (MERAH).";
+            insEl.style.color = "#bdc3c7";
             startBtn.style.display = 'none';
-            renderGrid(); // Render semula untuk buang class target-mode
+            renderGrid();
         }
 
-        // --- LOGIK KEMENANGAN & BUNGA API ---
         function checkBingoWin() {
             const winPatterns = [
-                [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], // Baris
-                [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], // Lajur
-                [0,6,12,18,24], [4,8,12,16,20] // Silang
+                [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24],
+                [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24],
+                [0,6,12,18,24], [4,8,12,16,20]
             ];
 
             let winningPatternFound = false;
@@ -350,22 +365,18 @@
                 fireFireworks();
                 setTimeout(() => {
                     document.getElementById('winModal').style.display = 'block';
-                }, 500);
+                }, 800);
             }
         }
 
         function fireFireworks() {
-            var duration = 5 * 1000;
+            var duration = 3 * 1000;
             var animationEnd = Date.now() + duration;
             var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 300 };
 
             var interval = setInterval(function() {
                 var timeLeft = animationEnd - Date.now();
-
-                if (timeLeft <= 0) {
-                    return clearInterval(interval);
-                }
-
+                if (timeLeft <= 0) return clearInterval(interval);
                 var particleCount = 50 * (timeLeft / duration);
                 confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
                 confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
@@ -373,14 +384,9 @@
         }
 
         function randomInRange(min, max) { return Math.random() * (max - min) + min; }
-        
-        function closeModal() {
-            document.getElementById('winModal').style.display = 'none';
-        }
+        function closeModal() { document.getElementById('winModal').style.display = 'none'; }
 
-        // Mula App
         init();
-
     </script>
 </body>
 </html>
